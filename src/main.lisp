@@ -4,7 +4,10 @@
    :cl
    :spinneret)
   (:export
-   ))
+   :generate
+
+   :start-preview
+   :stop-preview))
 (in-package :crystal)
 
 ;; ------------------------------------------------------------------------------
@@ -147,7 +150,7 @@
 ;; ------------------------------------------------------------------------------
 
 (let ((server-acceptor nil))
-  (defun start-server ()
+  (defun start-preview ()
     (setf server-acceptor
           (make-instance 'hunchentoot:easy-acceptor :port 5000))
     (hunchentoot:start server-acceptor)
@@ -173,6 +176,6 @@
                              (concatenate 'string *output-path* "/")))))))
      hunchentoot:*dispatch-table*))
 
-  (defun stop-server ()
+  (defun stop-preview ()
     (hunchentoot:stop server-acceptor)
     (setf server-acceptor nil)))
