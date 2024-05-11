@@ -12,17 +12,17 @@
       (:body ,@body))))
 
 (defun index ()
-  (page (:title "cddr.io")
+  (page (:title "Crystal")
     (:h1 "Index")
     (:p (:a :href "/about/" "About"))
     (:p (:a :href "/posts/2024-05-10-post/" "(2024-05-10) Post"))))
 
 (defun about ()
-  (page (:title "cddr.io | About")
+  (page (:title "Crystal | About")
     (:h1 "About")
     (:p (:a :href "/" "Index"))
     (:p (:a :href "/posts/2024-05-10-post/" "(2024-05-10) Post"))))
 
 (defun post (markdown-html)
-  (page (:title "cddr.io | Post")
+  (page (:title "Crystal | Post")
     (:raw markdown-html)))
