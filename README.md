@@ -47,10 +47,10 @@ Create a new Crystal website like this:
 ```lisp
 CL-USER> (require :crystal)
 
-CL-USER> (crystal:init "/home/username/new-website/")
+CL-USER> (crystal:init "~/new-website/")
 ```
 
-Now, a new website skeleton resides in `/home/username/new-website/`.
+Now, a new website skeleton resides in `~/new-website/`.
 
 Make ASDF aware of it, e.g. on Linux:
 
