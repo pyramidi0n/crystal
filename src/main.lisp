@@ -81,7 +81,7 @@
                 (apply code-func (append (list site-package-name) args))
                 (parse-namestring
                  (str:concat site-directory dest-relative-path))
-                :if-exists :overwrite
+                :if-exists :supersede
                 :if-does-not-exist :create)))
       (copy-directory:copy (parse-namestring *template-system-path*)
                            (parse-namestring site-directory))
