@@ -1,181 +1,98 @@
 (in-package :cl-user)
 (defpackage :crystal
   (:use
-   :cl
-   :spinneret)
+   :cl)
   (:export
-   :generate
-
-   :start-preview
-   :stop-preview))
+   :init))
 (in-package :crystal)
 
-;; ------------------------------------------------------------------------------
+;; -----------------------------------------------------------------------------
 
 (defparameter *system-path* (namestring (asdf:system-source-directory :crystal)))
-(defparameter *output-path* (concatenate 'string *system-path* "www"))
-(defparameter *site-path* (concatenate 'string *system-path* "site"))
-(defparameter *static-path* (concatenate 'string *site-path* "/static/"))
-(defparameter *styles-path* (concatenate 'string *site-path* "/styles/"))
-(defparameter *posts-path* (concatenate 'string *site-path* "/posts/"))
+(defparameter *template-system-path*
+  (str:concat (namestring (asdf:system-source-directory :crystal.template))
+              "template/"))
 
-(defparameter *page-routes* '())
-(defparameter *static-routes-prefix* nil)
-(defparameter *styles-routes-prefix* nil)
-(defparameter *post-routes-prefix* nil)
-(defparameter *post-template* nil)
+(defparameter *template-package-name* ":crystal.template")
 
-;; ------------------------------------------------------------------------------
+(defparameter *rel.src.main* "src/main.lisp")
+(defparameter *rel.site.config* "site/config.lisp")
+(defparameter *rel.site.pages* "site/pages.lisp")
+(defparameter *rel.asd* "template.asd")
 
-(defun generate ()
-  (labels ((path-collision-p ()
-             (let* ((page-paths
-                      (mapcar (lambda (route)
-                                (car route))
-                              *page-routes*))
-                    (paths
-                      (append page-paths
-                              (list *static-routes-prefix*
-                                    *styles-routes-prefix*
-                                    *post-routes-prefix*))))
-               (not (= (length paths)
-                       (length (remove-duplicates paths :test #'string=))))))
-           (verify-paths ()
-             (when (path-collision-p)
-               (error "Error: path collision. Verify your route definitions are unique.")))
-           (clean ()
-             (uiop:delete-directory-tree
-              (parse-namestring (concatenate 'string *output-path* "/"))
-              :validate t
-              :if-does-not-exist :ignore))
-           (static ()
-             (let* ((static-source-pathname (parse-namestring *static-path*))
-                    (static-output-pathname (parse-namestring
-                                             (concatenate 'string
-                                                          *output-path*
-                                                          *static-routes-prefix*))))
-               (when (probe-file static-source-pathname)
-                 (copy-directory:copy static-source-pathname
-                                      static-output-pathname))))
-           (styles ()
-             (mapcar (lambda (path)
-                       (let* ((styles-output-path (concatenate 'string
-                                                               *output-path*
-                                                               *styles-routes-prefix*))
-                              (style-output-path (concatenate 'string
-                                                              styles-output-path
-                                                              (pathname-name path)
-                                                              ".css")))
-                         (ensure-directories-exist (parse-namestring styles-output-path))
-                         (alexandria:write-string-into-file
-                          (apply #'concatenate
-                                 'string
-                                 (mapcar #'lass:compile-and-write
-                                         (with-input-from-string
-                                             (s (uiop:read-file-string path))
-                                           (let ((read nil)
-                                                 (forms '()))
-                                             (loop while (setf read (read s nil))
-                                                   do (push read forms))
-                                             (nreverse forms)))))
-                          (parse-namestring style-output-path))))
-                     (uiop:directory-files (parse-namestring *styles-path*))))
-           (pages ()
-             (mapcar (lambda (route)
-                       (let* ((url (car route))
-                              (template (cadr route))
-                              (url-path (concatenate 'string *output-path* url))
-                              (index-path (concatenate 'string url-path "index.html")))
-                         (ensure-directories-exist (parse-namestring url-path))
-                         (alexandria:write-string-into-file
-                          (funcall (symbol-function template))
-                          (parse-namestring index-path))))
-                     *page-routes*))
-           (posts ()
-             (when (and *post-routes-prefix* *post-template*)
-               (mapcar (lambda (post-pathname)
-                         (let* ((url-path (concatenate 'string
-                                                       *output-path*
-                                                       *post-routes-prefix*
-                                                       (pathname-name post-pathname)
-                                                       "/"))
-                                (index-path (concatenate 'string url-path "index.html"))
-                                (markdown-html (with-output-to-string (s)
-                                                 (cl-markdown:markdown
-                                                  (alexandria:read-file-into-string post-pathname)
-                                                  :format :html
-                                                  :stream s))))
-                           (ensure-directories-exist (parse-namestring url-path))
-                           (alexandria:write-string-into-file
-                            (funcall (symbol-function *post-template*) markdown-html)
-                            (parse-namestring index-path))))
-                       (uiop:directory-files (parse-namestring *posts-path*))))))
-    (handler-case
-        (progn
-          (verify-paths)
-          (clean)
-          (static)
-          (styles)
-          (pages)
-          (posts)
-          t)
-      (error (e)
-        (format *error-output* "~a~%" e) nil))))
+;; -----------------------------------------------------------------------------
 
-;; ------------------------------------------------------------------------------
+(defun template-code-str (relative-path)
+  (alexandria:read-file-into-string
+   (parse-namestring
+    (str:concat *template-system-path* relative-path))))
 
-(defmacro page-routes (&body body)
-  `(setf *page-routes* (quote ,body)))
+(defun keyword-str (str)
+  (str:concat ":" str))
 
-(defmacro static-routes-prefix (&body body)
-  `(setf *static-routes-prefix* ,@body))
+;; -----------------------------------------------------------------------------
 
-(defmacro styles-routes-prefix (&body body)
-  `(setf *styles-routes-prefix* ,@body))
+(defun src.main (site-package-name)
+  (str:replace-all *template-package-name*
+                   (keyword-str site-package-name)
+                   (template-code-str *rel.src.main*)))
 
-(defmacro post-routes-prefix (&body body)
-  `(setf *post-routes-prefix* ,@body))
+(defun site.config (site-package-name)
+  (str:replace-all *template-package-name*
+                   (keyword-str site-package-name)
+                   (template-code-str *rel.site.config*)))
 
-(defmacro post-template (&body body)
-  `(setf *post-template* (quote ,@body)))
+(defun site.pages (site-package-name)
+  (str:replace-all *template-package-name*
+                   (keyword-str site-package-name)
+                   (template-code-str *rel.site.pages*)))
 
-;; ------------------------------------------------------------------------------
+(defun site.system (site-system-name &key
+                                       description
+                                       version
+                                       author
+                                       license)
+  (let ((code-str (template-code-str *rel.asd*)))
+    (labels ((replace-keyval-str (code-str key val)
+               (str:replace-all (str:concat key " \"\"")
+                                (str:concat key " \"" val "\"")
+                                code-str))
+             (update-code-str (key val)
+               (setf code-str (replace-keyval-str code-str key val))))
+      (update-code-str "defsystem" site-system-name)
+      (update-code-str "description" description)
+      (update-code-str "version" version)
+      (update-code-str "author" author)
+      (update-code-str "license" license)
+      code-str)))
 
-(defun static (filepath)
-  (concatenate 'string *static-routes-prefix* filepath))
-
-(defun style (filename)
-  (concatenate 'string *styles-routes-prefix* filename))
-
-;; ------------------------------------------------------------------------------
-
-(let ((server-acceptor nil))
-  (defun start-preview ()
-    (setf server-acceptor
-          (make-instance 'hunchentoot:easy-acceptor :port 5000))
-    (hunchentoot:start server-acceptor)
-    (push
-     (hunchentoot:create-prefix-dispatcher
-      "/"
-      (lambda ()
-        (let ((request-path (hunchentoot:request-pathname hunchentoot:*request* "/")))
-          (when (null request-path)
-            (setf (hunchentoot:return-code*) hunchentoot:+http-forbidden+)
-            (hunchentoot:abort-request-handler))
-          (when (or (= 0 (length (namestring request-path)))
-                    (char= #\/
-                           (char (namestring request-path)
-                                 (1- (length (namestring request-path))))))
-            (setf request-path
-                  (parse-namestring (concatenate 'string
-                                                 (namestring request-path)
-                                                 "index.html"))))
-          (hunchentoot:handle-static-file
-           (merge-pathnames request-path
-                            (parse-namestring
-                             (concatenate 'string *output-path* "/")))))))
-     hunchentoot:*dispatch-table*))
-
-  (defun stop-preview ()
-    (hunchentoot:stop server-acceptor)
-    (setf server-acceptor nil)))
+(defun init (site-directory &key
+                              (description "")
+                              (version "1.0.0")
+                              (author "")
+                              (license ""))
+  (let ((site-package-name (first
+                            (last
+                             (pathname-directory
+                              (parse-namestring
+                               site-directory))))))
+    (labels ((write-site-code (code-func dest-relative-path &rest args)
+               (alexandria:write-string-into-file
+                (apply code-func (append (list site-package-name) args))
+                (parse-namestring
+                 (str:concat site-directory dest-relative-path))
+                :if-exists :overwrite
+                :if-does-not-exist :create)))
+      (copy-directory:copy (parse-namestring *template-system-path*)
+                           (parse-namestring site-directory))
+      (delete-file (parse-namestring (str:concat site-directory *rel.asd*)))
+      (write-site-code #'src.main *rel.src.main*)
+      (write-site-code #'site.config *rel.site.config*)
+      (write-site-code #'site.pages *rel.site.pages*)
+      (write-site-code #'site.system
+                       (str:concat site-package-name ".asd")
+                       :description description
+                       :version version
+                       :author author
+                       :license license)))
+  t)

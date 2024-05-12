@@ -6,13 +6,12 @@ A Lispy static site generator using Spinneret, Lass, and Markdown.
 
 1. [Overview](#overview)
 2. [Installation](#installation)
-3. [Project Structure](#project-structure)
-4. [Basic Usage](#basic-usage)
-5. [Starting a New Project](#starting-a-new-project)
-6. [Deployment](#deployment)
-7. [Links](#links)
-8. [Patches](#patches)
-9. [License](#license)
+3. [Usage](#usage)
+4. [Project Structure](#project-structure)
+5. [Deployment](#deployment)
+6. [Links](#links)
+7. [Patches](#patches)
+8. [License](#license)
 
 ## Overview
 
@@ -41,9 +40,50 @@ Install Crystal:
 CL-USER> (ql:quickload :crystal)
 ```
 
+## Usage
+
+Create a new Crystal website like this:
+
+```lisp
+CL-USER> (require :crystal)
+
+CL-USER> (crystal:init "/home/username/new-website/")
+```
+
+Now, a new website skeleton resides in `/home/username/new-website/`.
+
+Make ASDF aware of it, e.g. on Linux:
+
+```bash
+$ ln -s ~/new-website ~/.local/share/common-lisp/source/
+```
+
+You'll subsequently work on this new website.
+
+```lisp
+CL-USER> (require :new-website)
+```
+
+Generating and previewing the new website is straightforward:
+
+```lisp
+CL-USER> (new-website:generate)
+
+CL-USER> (new-website:start-preview)
+```
+
+Then direct a web browser to `http://localhost:5000`.
+
+The preview may be shut down with:
+
+```lisp
+CL-USER> (new-website:stop-preview)
+```
+
 ## Project Structure
 
-The contents of a Crystal site live in the `site` directory.
+The contents of a Crystal website created by `crystal:init` live in the `site`
+directory.
 
 Pages are written using [Spinneret](https://github.com/ruricolist/spinneret)
 and reside in `site/pages.lisp`. Each page template is a Common Lisp function
@@ -77,92 +117,9 @@ a symbol naming a page template function; Markdown is passed into this template
 when each post is generated. The other macros specify path prefixes for
 various assets after the site is generated.
 
-## Basic Usage
-
-Generating and previewing a Crystal site is straightforward:
-
-```lisp
-CL-USER> (require :crystal)
-
-CL-USER> (crystal:generate)
-
-CL-USER> (crystal:start-preview)
-```
-
-Then direct a web browser to `http://localhost:5000`.
-
-The preview may be shut down with:
-
-```lisp
-CL-USER> (crystal:stop-preview)
-```
-
-## Starting a New Project
-
-While Crystal ships with a project skeleton, it's usually desirable to duplicate
-the whole system for any new website.
-
-For example, assuming the Crystal repository resides in
-`~/quicklisp/dists/ultralisp/software/pyramidi0n-crystal`:
-
-```bash
-$ cp ~/quicklisp/dists/ultralisp/software/pyramidi0n-crystal ~/new-site
-
-$ mv ~/new-site/crystal.asd ~/new-site/new-site.asd
-```
-
-Make this new repository available to ASDF, e.g. on Linux:
-
-```bash
-$ ln -s ~/new-site ~/.local/share/common-lisp/source/
-```
-
-Then, edit the source code so that ASDF understands this is a new system:
-
-In `~/new-site/new-site.asd`:
-
-```lisp
-(defsystem "crystal"
-...)
-```
-
-becomes
-
-```lisp
-(defsystem "new-site"
-...)
-```
-
-In `~/new-site/src/main.lisp`:
-
-```lisp
-(defparameter *system-path* (namestring (asdf:system-source-directory :crystal)))
-```
-
-becomes
-
-```lisp
-(defparameter *system-path* (namestring (asdf:system-source-directory :new-site)))
-```
-
-Thereafter:
-
-```lisp
-CL-USER> (require :new-site)
-
-CL-USER> (crystal:generate)
-
-CL-USER> (crystal:start-preview)
-
-CL-USER> (crystal:stop-preview)
-```
-
-and so forth. Though this new site's code resides in a new ASDF system, the
-`crystal` package is still used, unless that package is otherwise changed.
-
 ## Deployment
 
-Crystal's generated output resides in `www`.
+A Crystal website's generated output resides in `www`.
 
 Deployment is as simple as copying the contents of that directory to a remote
 host.

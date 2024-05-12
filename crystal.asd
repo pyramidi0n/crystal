@@ -3,17 +3,13 @@
   :version "1.0.0"
   :author "Stephen Youts"
   :license "BSD-2"
-  :depends-on ("alexandria"
-               "cl-markdown"
+  :depends-on ("crystal.template"
+               "alexandria"
                "copy-directory"
-               "hunchentoot"
-               "lass"
-               "spinneret"
-               "uiop")
+               "str")
   :components ((:static-file "LICENSE")
                (:static-file "README.md")
 
-               (:file "main" :pathname "src/main")
-
-               (:file "config" :pathname "site/config" :depends-on ("main"))
-               (:file "pages" :pathname "site/pages" :depends-on ("main"))))
+               (:module "src"
+                :components
+                ((:file "main" :pathname "main")))))
